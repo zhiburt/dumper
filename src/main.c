@@ -9,7 +9,7 @@
 
 int main(int argc, char **argv) {
 
-    if (argc == 2 || argc == 4)
+    if (argc == 2)
     {
         int pid = atoi(argv[1]);
         long ptraceResult = ptrace(PTRACE_ATTACH, pid, NULL, NULL);
@@ -27,48 +27,31 @@ int main(int argc, char **argv) {
         char memFilename[1024];
         sprintf(memFilename, "/proc/%s/mem", argv[1]);
         FILE* pMemFile = fopen(memFilename, "r");
-        int serverSocket = -1;
-        if (argc == 4)
-        {   
-            unsigned int port;
-            int count = sscanf(argv[3], "%d", &port);
-            if (count == 0)
-            {
-                printf("Invalid port specified\n");
-                return EXIT_FAILURE;
-            }
-            serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-            if (serverSocket == -1)
-            {
-                printf("Could not create socket\n");
-                return EXIT_FAILURE;
-            }
-            struct sockaddr_in serverSocketAddress;
-            serverSocketAddress.sin_addr.s_addr = inet_addr(argv[2]);
-            serverSocketAddress.sin_family = AF_INET;
-            serverSocketAddress.sin_port = htons(port);
-            if (connect(serverSocket, (struct sockaddr *) &serverSocketAddress, sizeof(serverSocketAddress)) < 0)
-            {
-                printf("Could not connect to server\n");
-                return EXIT_FAILURE;
-            }
-        }
+        
         int sizeLine = 256;
         char line[sizeLine];
         while (fgets(line, sizeLine, pMapsFile) != NULL)
         {
+
             unsigned long start_address;
             unsigned long end_address;
             sscanf(line, "%08lx-%08lx\n", &start_address, &end_address);
-            dump_memory_region(pMemFile, start_address, end_address - start_address, serverSocket);
+
+            char *name = NULL;
+            name = getRegionName(pid, start_address, end_address - start_address);
+            if (name != NULL){
+                printf("name of region = %s\n", name);
+                free(name);
+            }else{
+                printf("name of region = %s\n", "anonymous region");
+            }
+
+            dump_memory_region(pMemFile, start_address, end_address - start_address);
+            
         }
         fclose(pMapsFile);
         fclose(pMemFile);
-        if (serverSocket != -1)
-        {
-            close(serverSocket);
-        }
-
+        
         ptrace(PTRACE_CONT, pid, NULL, NULL);
         ptrace(PTRACE_DETACH, pid, NULL, NULL);
     }
