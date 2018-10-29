@@ -12,4 +12,7 @@ char* getLastWord(const char* line);
 
 //hexdumper
 void dumpCanonical(char* page, int pageLength);
+void dumpCanonicalWithRealAdresses(char* page, int pageLength, unsigned long start);
 int CompareTwoBytes(const char* page, int start1, int start2);
+void getLongAddress(const char* line, unsigned long *x1, unsigned long *x2);
+void getShortAddress(const char* line, unsigned long *x1, unsigned long *x2);

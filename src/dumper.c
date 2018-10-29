@@ -7,12 +7,12 @@ void dump_memory_region(FILE* pMemFile, unsigned long start_address, long length
     int pageLength = getpagesize(); // int pageLength = 4096;
     unsigned char page[pageLength];
     fseeko(pMemFile, start_address, SEEK_SET);//move pointer of file (carriage) to the start of the region 
-
+    
     for (address=start_address; address < start_address + length; address += pageLength)
     {
         fread(&page, 1, pageLength, pMemFile);
         //writeTo(page, pageLength);
-        dumpCanonical(page, pageLength);
+        dumpCanonicalWithRealAdresses(page, pageLength, address);
     }
 }
 
@@ -31,7 +31,7 @@ char* getRegionName(unsigned int pid,unsigned long start_address, long length){
     {
         unsigned long sa;
         unsigned long ea;
-        sscanf(line, "%08lx-%08lx\n", &sa, &ea);
+        getLongAddress(line, &sa, &ea);
         if (start_address == sa && ea == start_address + length){
             fclose(pMapsFile);
             char* last = NULL;
@@ -40,7 +40,7 @@ char* getRegionName(unsigned int pid,unsigned long start_address, long length){
         }
     }
     fclose(pMapsFile);
-    return "invalid";
+    return "invalid_";
 }
 
 char* getLastWord(const char* line){
@@ -60,11 +60,76 @@ char* getLastWord(const char* line){
     return last_tok;
 }
 
+void getLongAddress(const char* line, unsigned long *x1, unsigned long *x2){
+    sscanf(line, "%016lx-%016lx\n", x1, x2);
+}
+
+
+void getShortAddress(const char* line, unsigned long *x1, unsigned long *x2){
+    sscanf(line, "%08lx-%08lx\n", x1, x2);
+}
+
+
+//DUMP
+
 void dumpCanonical(char* page, int pageLength){
     char ascii[17]; // last column
 	size_t i, j;
 	ascii[16] = '\0'; 
     int iter = 0x00000000; // iterator first column
+    int last_star_or_not = 1; // bool flag
+	for (i = 0; i < pageLength; ++i) {
+
+        if (i % 16 == 0){
+            if (CompareTwoBytes(page, i - 16, i) == 0 && i >= 16){ // check on first row for the some out like hexdump -C (cannonical)
+                iter += 16;
+
+                if (last_star_or_not != 0){
+                    printf("*\n");
+                }
+            
+                i += 15; // continue ++;
+                
+                last_star_or_not = 0;  
+                continue;
+
+            }
+
+            printf("%08x  ", iter);
+            iter += 16;
+
+            last_star_or_not = 1; 
+        }
+        
+        printf("%02X ", ((unsigned char*)page)[i]);
+		if (((unsigned char*)page)[i] >= ' ' && ((unsigned char*)page)[i] <= '~') {
+			ascii[i % 16] = ((unsigned char*)page)[i];
+		} else {
+			ascii[i % 16] = '.';
+		}
+		if ((i+1) % 8 == 0 || i+1 == pageLength) {
+			printf(" ");
+			if ((i+1) % 16 == 0) {
+				printf("|%s|\n", ascii);
+			} else if (i+1 == pageLength) {
+				ascii[(i+1) % 16] = '\0';
+				if ((i+1) % 16 <= 8) {
+					printf(" ");
+				}
+				for (j = (i+1) % 16; j < 16; ++j) {
+					printf("   ");
+				}
+				printf("|%s|\n", ascii);
+			}
+		}
+    }
+}
+
+void dumpCanonicalWithRealAdresses(char* page, int pageLength, unsigned long start){
+    char ascii[17]; // last column
+	size_t i, j;
+	ascii[16] = '\0'; 
+    int iter = start; // iterator first column
     int last_star_or_not = 1; // bool flag
 	for (i = 0; i < pageLength; ++i) {
 
