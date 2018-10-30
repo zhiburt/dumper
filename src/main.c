@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
             // sscanf(line, "%016lx-%016lx\n", &start_address, &end_address);
             char *name = NULL;
             if (argc == 3){
-                if (strcmp(argv[2], "-f") || strcmp(argv[2], "--f")){
+                if (strcmp(argv[2], "-f") || strcmp(argv[2], "--full")){
                     getLongAddress(line, &start_address, &end_address);
                 }else{
                     getShortAddress(line, &start_address, &end_address);
@@ -56,8 +56,10 @@ int main(int argc, char **argv) {
                 printf("\nregion = %s\n", "anonymous region");
             }
 
+            char* rs = dumpMRegion(pMemFile, start_address, end_address - start_address);
             dump_memory_region(pMemFile, start_address, end_address - start_address);
-            
+            // printf("%s", rs);
+            // fwrite(rs, 1, strlen(rs), stdout);
         }
         fclose(pMapsFile);
         fclose(pMemFile);
