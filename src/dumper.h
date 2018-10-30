@@ -8,6 +8,7 @@
 void dump_memory_region(FILE* pMemFile, unsigned long start_address, long length);
 void writeTo(char* page, int pageLength);
 char* getRegionName(unsigned int pid,unsigned long start_address, long length);
+char* getRName(const char *str);
 char* getLastWord(const char* line);
 
 //hexdumper

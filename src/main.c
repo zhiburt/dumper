@@ -9,7 +9,7 @@
 
 int main(int argc, char **argv) {
 
-    if (argc == 2)
+    if (argc >= 2)
     {
         int pid = atoi(argv[1]);
         long ptraceResult = ptrace(PTRACE_ATTACH, pid, NULL, NULL);
@@ -37,9 +37,18 @@ int main(int argc, char **argv) {
             unsigned long end_address;
             // sscanf(line, "%08lx-%08lx\n", &start_address, &end_address);
             // sscanf(line, "%016lx-%016lx\n", &start_address, &end_address);
-            getLongAddress(line, &start_address, &end_address);
             char *name = NULL;
-            name = getRegionName(pid, start_address, end_address - start_address);
+            if (argc == 3){
+                if (strcmp(argv[2], "-f") || strcmp(argv[2], "--f")){
+                    getLongAddress(line, &start_address, &end_address);
+                }else{
+                    getShortAddress(line, &start_address, &end_address);
+                }
+            }else{
+                getShortAddress(line, &start_address, &end_address);
+            }
+
+            name = getRName(line);
             if (name != NULL){
                 printf("\nregion = %s\n", name);
                 free(name);

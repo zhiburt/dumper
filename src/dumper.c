@@ -43,6 +43,12 @@ char* getRegionName(unsigned int pid,unsigned long start_address, long length){
     return "invalid_";
 }
 
+char* getRName(const char *str){
+    char* last = NULL;
+    last = getLastWord(str);
+    return last;
+}
+
 char* getLastWord(const char* line){
     char *last_tok = malloc(sizeof(char) * 100);
     int i = 0;
