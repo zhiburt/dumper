@@ -1,7 +1,7 @@
 #include "dumper.h"
 
 //we read here some region by pages
-void dump_memory_region(FILE* pMemFile, unsigned long start_address, long length)
+void dump_memory_region(FILE* pMemFile, unsigned long start_address, long length, int realAdress)
 {
     unsigned long address;
     int pageLength = getpagesize(); // int pageLength = 4096;
@@ -12,12 +12,21 @@ void dump_memory_region(FILE* pMemFile, unsigned long start_address, long length
     {
         fread(&page, 1, pageLength, pMemFile);
         //writeTo(page, pageLength);
-        dumpCanonicalWithRealAdresses(page, pageLength, address);
+        if (realAdress == 0){
+            dumpCanonicalWithRealAdresses(page, pageLength, address);
+        }else{
+            dumpCanonical(page, pageLength);
+        }
     }
 }
 
-char* dumpMRegion(FILE* pMemFile, unsigned long start_address, long length){
-    char *resp = malloc((start_address + length) * 2);
+char* dumpMRegion(FILE* pMemFile, unsigned long start_address, long length, int realAdress){
+    unsigned long size = (start_address + (unsigned long)length);
+    char *resp = malloc(size * 2);
+    int x = realAdress;
+    if (realAdress != 0){
+        x = -1;
+    }
     unsigned long address;
     int pageLength = getpagesize(); // int pageLength = 4096;
     unsigned char page[pageLength];
@@ -26,10 +35,15 @@ char* dumpMRegion(FILE* pMemFile, unsigned long start_address, long length){
     for (address=start_address; address < start_address + length; address += pageLength)
     {
         fread(&page, 1, pageLength, pMemFile);
-        char *can = dumpCanon(page, pageLength, -1);
+        char *can;
+        if (x == -1){
+            can = dumpCanon(page, pageLength);
+        }else{
+            can = dumpCanonR(page, pageLength, address);
+        }
         resp = strcat(resp, can);
     }
-
+    
     return resp;
 }
 
@@ -203,7 +217,7 @@ void dumpCanonicalWithRealAdresses(char* page, int pageLength, unsigned long sta
     }
 }
 
-char *dumpCanon(char* page, int pageLength, long start){
+char *dumpCanonR(char* page, unsigned long pageLength, unsigned long start){
     int size = pageLength * 10;
     char* resp = malloc(size);
 
@@ -214,9 +228,6 @@ char *dumpCanon(char* page, int pageLength, long start){
 	ascii[16] = '\0'; 
     
     int iter = start; // iterator first column
-    if (start < 0){
-        iter = 0;
-    }
 
     int last_star_or_not = 1; // bool flag
 	for (i = 0; i < pageLength; ++i) {
@@ -274,6 +285,76 @@ char *dumpCanon(char* page, int pageLength, long start){
     }
     return resp;
 }
+
+char *dumpCanon(char* page, int pageLength){
+    int size = pageLength * 10;
+    char* resp = malloc(size);
+
+    char* l = malloc(pageLength / 4);
+
+    char ascii[17]; // last column
+	size_t i, j;
+	ascii[16] = '\0'; 
+    
+    int iter = 0; // iterator first column
+
+    int last_star_or_not = 1; // bool flag
+	for (i = 0; i < pageLength; ++i) {
+
+        if (i % 16 == 0){
+            if (CompareTwoBytes(page, i - 16, i) == 0 && i >= 16){ // check on first row for the some out like hexdump -C (cannonical)
+                iter += 16;
+
+                if (last_star_or_not != 0){
+                    resp = strcat(resp, "*\n");
+
+                }
+            
+                i += 15; // continue ++;
+                
+                last_star_or_not = 0;  
+                continue;
+
+            }
+            sprintf(l,"%08x  ", iter);
+            resp = strcat(resp, l);
+
+            iter += 16;
+
+            last_star_or_not = 1; 
+        }
+        
+        sprintf(l,"%02X ", ((unsigned char*)page)[i]);
+        resp = strcat(resp, l);
+		
+        if (((unsigned char*)page)[i] >= ' ' && ((unsigned char*)page)[i] <= '~') {
+			ascii[i % 16] = ((unsigned char*)page)[i];
+		} else {
+			ascii[i % 16] = '.';
+		}
+		if ((i+1) % 8 == 0 || i+1 == pageLength) {
+            resp = strcat(resp, " ");
+		
+			if ((i+1) % 16 == 0) {
+				sprintf(l, "|%s|\n", ascii);
+                resp = strcat(resp, l);
+            } else if (i+1 == pageLength) {
+				ascii[(i+1) % 16] = '\0';
+				if ((i+1) % 16 <= 8) {
+                    resp = strcat(resp, " ");
+				}
+				for (j = (i+1) % 16; j < 16; ++j) {
+                    resp = strcat(resp, "   ");
+				}
+				sprintf(l, "|%s|\n", ascii);
+                resp = strcat(resp, l);
+			}
+		}
+    
+    }
+    return resp;
+}
+
 
 int CompareTwoBytes(const char* page, int s1, int s2){
     for(int i = 0; i < 16; i++, s1++, s2++){

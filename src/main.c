@@ -38,16 +38,24 @@ int main(int argc, char **argv) {
             // sscanf(line, "%08lx-%08lx\n", &start_address, &end_address);
             // sscanf(line, "%016lx-%016lx\n", &start_address, &end_address);
             char *name = NULL;
-            if (argc == 3){
-                if (strcmp(argv[2], "-f") || strcmp(argv[2], "--full")){
+            int typeAdd = -1;
+        //MENU 
+            if (argc == 3 || argc == 4){
+                if (strcmp(argv[2], "-f") == 0 || strcmp(argv[2], "--full") == 0){
+                    if (argc == 4 && strcmp(argv[3], "-r") == 0){
+                        typeAdd = 0;
+                    }
                     getLongAddress(line, &start_address, &end_address);
+                }else if (strcmp(argv[2], "-r") == 0 || strcmp(argv[2], "--real") == 0){
+                    typeAdd = 0;
+                    getShortAddress(line, &start_address, &end_address);
                 }else{
                     getShortAddress(line, &start_address, &end_address);
                 }
             }else{
                 getShortAddress(line, &start_address, &end_address);
             }
-
+        //END MENU
             name = getRName(line);
             if (name != NULL){
                 printf("\nregion = %s\n", name);
@@ -56,8 +64,8 @@ int main(int argc, char **argv) {
                 printf("\nregion = %s\n", "anonymous region");
             }
 
-            char* rs = dumpMRegion(pMemFile, start_address, end_address - start_address);
-            dump_memory_region(pMemFile, start_address, end_address - start_address);
+            // char* rs = dumpMRegion(pMemFile, start_address, end_address - start_address, typeAdd);
+            dump_memory_region(pMemFile, start_address, end_address - start_address, typeAdd);
             // printf("%s", rs);
             // fwrite(rs, 1, strlen(rs), stdout);
         }
