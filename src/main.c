@@ -64,9 +64,9 @@ int main(int argc, char **argv) {
                 printf("\nregion = %s\n", "anonymous region");
             }
 
-            // char* rs = dumpMRegion(pMemFile, start_address, end_address - start_address, typeAdd);
-            dump_memory_region(pMemFile, start_address, end_address - start_address, typeAdd);
-            // printf("%s", rs);
+            char* rs = dumpMRegion(pMemFile, start_address, end_address - start_address, typeAdd);
+            // dump_memory_region(pMemFile, start_address, end_address - start_address, typeAdd);
+            printf("%s", rs);
             // fwrite(rs, 1, strlen(rs), stdout);
         }
         fclose(pMapsFile);

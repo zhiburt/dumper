@@ -21,7 +21,7 @@ void dump_memory_region(FILE* pMemFile, unsigned long start_address, long length
 }
 
 char* dumpMRegion(FILE* pMemFile, unsigned long start_address, long length, int realAdress){
-    unsigned long size = (start_address + (unsigned long)length);
+    unsigned long size = ((unsigned long)length * 10);
     char *resp = malloc(size * 2);
     int x = realAdress;
     if (realAdress != 0){
@@ -42,6 +42,7 @@ char* dumpMRegion(FILE* pMemFile, unsigned long start_address, long length, int 
             can = dumpCanonR(page, pageLength, address);
         }
         resp = strcat(resp, can);
+
     }
     
     return resp;
@@ -364,4 +365,96 @@ int CompareTwoBytes(const char* page, int s1, int s2){
     }
 
     return 0;
+}
+
+
+
+
+//high test
+
+
+char* getDumpCannFR(int pid){
+
+}
+
+
+char* getDumpCannSR(int pid){
+
+}
+
+char* getDumpCannF(int pid){
+
+}
+
+char* getDumpCannS(int pid){
+        long ptraceResult = ptrace(PTRACE_ATTACH, pid, NULL, NULL);
+        if (ptraceResult < 0)
+        {
+            // printf("Unable to attach to the pid specified\n");
+            return NULL;
+        }
+        // wait(NULL);
+        waitpid(pid, NULL, 0);
+
+        char mapsFilename[1024];
+        sprintf(mapsFilename, "/proc/%d/maps", pid);
+        FILE* pMapsFile = fopen(mapsFilename, "r");
+        char memFilename[1024];
+        sprintf(memFilename, "/proc/%d/mem", pid);
+        FILE* pMemFile = fopen(memFilename, "r");
+        
+        int size = getSize(pMapsFile);
+        char *resp = malloc(size * 2);
+        char *temp_ = 0;
+
+        int sizeLine = 256;
+        char line[sizeLine];
+        while (fgets(line, sizeLine, pMapsFile) != NULL)
+        {
+
+            unsigned long start_address;
+            unsigned long end_address;
+            char *name = NULL;
+            int typeAdd = -1;
+            getShortAddress(line, &start_address, &end_address);
+            name = getRName(line);
+            if (name != NULL){
+
+                sprintf(temp_, "\nregion = %s\n", name);
+                resp = strcat(resp, temp_);
+                free(name);
+            }else{
+
+                sprintf(temp_, "\nregion = %s\n", "anonymous region");
+                resp = strcat(resp, temp_);
+            }
+
+            char* rs = dumpMRegion(pMemFile, start_address, end_address - start_address, typeAdd);
+            resp = strcat(resp, rs);
+        }
+        fclose(pMapsFile);
+        fclose(pMemFile);
+        
+        ptrace(PTRACE_CONT, pid, NULL, NULL);
+        ptrace(PTRACE_DETACH, pid, NULL, NULL);
+
+        return resp;
+}
+
+
+unsigned long getSize(FILE* pMapsFile){
+        unsigned long size = 0;
+        int sizeLine = 256;
+        char line[sizeLine];
+        while (fgets(line, sizeLine, pMapsFile) != NULL)
+        {
+            unsigned long start_address;
+            unsigned long end_address;
+            char *name = NULL;
+            int typeAdd = -1;
+            getLongAddress(line, &start_address, &end_address);
+            size += (end_address - start_address);
+        }
+
+        return size;
 }

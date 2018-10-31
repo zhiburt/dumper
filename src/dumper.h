@@ -20,3 +20,11 @@ void dumpCanonicalWithRealAdresses(char* page, int pageLength, unsigned long sta
 int CompareTwoBytes(const char* page, int start1, int start2);
 void getLongAddress(const char* line, unsigned long *x1, unsigned long *x2);
 void getShortAddress(const char* line, unsigned long *x1, unsigned long *x2);
+
+//high api
+
+char* getDumpCannFR(int pid);
+char* getDumpCannSR(int pid);
+char* getDumpCannF(int pid);
+char* getDumpCannS(int pid);
+unsigned long getSize(FILE* pMapsFile);
