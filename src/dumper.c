@@ -28,11 +28,11 @@ char* dumpMRegion(FILE* pMemFile, unsigned long start_address, long length, int 
         x = -1;
     }
     unsigned long address;
-    int pageLength = getpagesize(); // int pageLength = 4096;
+    unsigned long pageLength = getpagesize(); // int pageLength = 4096;
     unsigned char page[pageLength];
     fseeko(pMemFile, start_address, SEEK_SET);//move pointer of file (carriage) to the start of the region 
     
-    for (address=start_address; address < start_address + length; address += pageLength)
+    for (address=start_address; address < start_address + (unsigned long)length; address += pageLength)
     {
         fread(&page, 1, pageLength, pMemFile);
         char *can;
@@ -228,7 +228,7 @@ char *dumpCanonR(char* page, unsigned long pageLength, unsigned long start){
 	size_t i, j;
 	ascii[16] = '\0'; 
     
-    int iter = start; // iterator first column
+    unsigned long iter = start; // iterator first column
 
     int last_star_or_not = 1; // bool flag
 	for (i = 0; i < pageLength; ++i) {
@@ -248,7 +248,7 @@ char *dumpCanonR(char* page, unsigned long pageLength, unsigned long start){
                 continue;
 
             }
-            sprintf(l,"%08x  ", iter);
+            sprintf(l,"%016lx  ", iter);
             resp = strcat(resp, l);
 
             iter += 16;
@@ -371,22 +371,9 @@ int CompareTwoBytes(const char* page, int s1, int s2){
 
 
 //high test
-
-
-char* getDumpCannFR(int pid){
-
-}
-
-
-char* getDumpCannSR(int pid){
-
-}
-
-char* getDumpCannF(int pid){
-
-}
-
-char* getDumpCannS(int pid){
+//addrrType = 0 if real addresses or -1
+//scnTp == short scan or full one 0 if short
+char* getDumpCann(int pid, int addrrType, int scnTp){
         long ptraceResult = ptrace(PTRACE_ATTACH, pid, NULL, NULL);
         if (ptraceResult < 0)
         {
@@ -396,16 +383,16 @@ char* getDumpCannS(int pid){
         // wait(NULL);
         waitpid(pid, NULL, 0);
 
-        char mapsFilename[1024];
+        char mapsFilename[1024] = {};
         sprintf(mapsFilename, "/proc/%d/maps", pid);
         FILE* pMapsFile = fopen(mapsFilename, "r");
         char memFilename[1024];
         sprintf(memFilename, "/proc/%d/mem", pid);
         FILE* pMemFile = fopen(memFilename, "r");
         
-        int size = getSize(pMapsFile);
-        char *resp = malloc(size * 2);
-        char *temp_ = 0;
+        unsigned long size = getSize(pMapsFile);
+        char *resp = malloc(size * 10);
+        char *temp_ = malloc(1024);
 
         int sizeLine = 256;
         char line[sizeLine];
@@ -415,8 +402,15 @@ char* getDumpCannS(int pid){
             unsigned long start_address;
             unsigned long end_address;
             char *name = NULL;
-            int typeAdd = -1;
-            getShortAddress(line, &start_address, &end_address);
+            
+            //settings            
+            if (scnTp == 0){
+                getShortAddress(line, &start_address, &end_address);
+            }else{
+                getLongAddress(line, &start_address, &end_address);
+            }
+            //settings
+
             name = getRName(line);
             if (name != NULL){
 
@@ -429,8 +423,12 @@ char* getDumpCannS(int pid){
                 resp = strcat(resp, temp_);
             }
 
-            char* rs = dumpMRegion(pMemFile, start_address, end_address - start_address, typeAdd);
-            resp = strcat(resp, rs);
+            char* rs = dumpMRegion(pMemFile, start_address, end_address - start_address, addrrType);
+            if (rs != NULL){
+                resp = strcat(resp, rs);
+            }else{
+                resp = strcat(resp, "00000000 addreses more then 8 byte");
+            }
         }
         fclose(pMapsFile);
         fclose(pMemFile);
@@ -456,5 +454,7 @@ unsigned long getSize(FILE* pMapsFile){
             size += (end_address - start_address);
         }
 
-        return size;
+    fseek(pMapsFile, 0, SEEK_SET);
+    return size;
 }
+
